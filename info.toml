@@ -1,0 +1,9 @@
+[meta]
+name = "RoyalMapTools"
+author = "zayshaa"
+category = "Map Editor"
+
+version = "0.1"
+
+[script]
+imports = [ "Icons.as" ]
