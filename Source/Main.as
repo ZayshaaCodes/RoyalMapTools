@@ -5,7 +5,16 @@ CGameCtnEditorCommon@ _editor;
 CGameEditorPluginMapMapType@ _mapEditor;
 CGameCtnChallenge@ _map;
 
+[Setting name="Enabled"]
 bool windowsVisible = true;
+
+[Setting name="Save With Colored Names"]
+bool saveWithColoredName = false;
+
+[Setting name="Size"] 
+vec2 window_size = vec2(200,500);
+[Setting name="Position"] 
+vec2 window_pos = vec2(10,500);
 
 string _searchText = "";
 bool _showGoals = true;
@@ -18,13 +27,14 @@ ListBlockItem@[] blockList;
 
 const float pi = 3.141592656f;
 
-
 void Main()
 {
 }
 
 void OnSettingsChanged()
 {
+	UI::SetNextWindowSize(int(window_size.x), int(window_size.y), UI::Cond::Always);
+	UI::SetNextWindowPos(int(window_pos.x), int(window_pos.y), UI::Cond::Always);
 }
 
 float _lastDt;
@@ -99,6 +109,9 @@ void RenderMem()
 
 void Render2()
 {
+	UI::SetNextWindowSize(int(window_size.x), int(window_size.y), UI::Cond::Appearing);
+	UI::SetNextWindowPos(int(window_pos.x), int(window_pos.y), UI::Cond::Appearing);
+
 	UI::Begin("Royal Map Tool", windowsVisible);
 
 	UI::Text("Set Map Type:");
@@ -135,6 +148,7 @@ void Render2()
 	if (UI::Button("Black")) AntiPurge(5);	
 	UI::PopID();
 
+	// saveWithColoredName = UI::Checkbox("Matching Colored Name", saveWithColoredName);
 
 	UI::Text("Save As:");
 	SameLineAtXPosition(130);
@@ -170,6 +184,13 @@ void Render2()
 
 	DrawBlockList();
 
+	auto nowSize = UI::GetWindowSize();
+	auto nowPos = UI::GetWindowPos();
+	if (nowSize.x != window_size.x || nowSize.y != window_size.y )		
+		window_size = nowSize;
+	if (nowPos.x != window_pos.x || nowPos.y != window_pos.y )		
+		window_pos = nowPos;
+
 	UI::End();
 }
 
@@ -180,14 +201,14 @@ void SameLineAtXPosition(float xPosition){
 	UI::SetCursorPos(cPos);
 }
 
-int lastBlockCount = 0;
+uint lastBlockCount = 0;
 void UpdateBlockList(){
 	
 	if( _map.Blocks.Length == lastBlockCount && _dirty != true) return;
 	_dirty = false;
 	blockList.RemoveRange(0, blockList.Length);
 
-	for (int i = 0 ; i < _map.Blocks.Length && blockList.Length < 100; i++)
+	for (uint i = 0 ; i < _map.Blocks.Length && blockList.Length < 100; i++)
 	{
 		auto curBlock = _map.Blocks[i];
 		if ((_showGoals || _showSpawns || _showCps) && curBlock.WaypointSpecialProperty !is null) {
@@ -229,7 +250,7 @@ void DrawBlockList()
 
 	UI::BeginChild("blockList");
 
-	for (int i = 0 ; i < blockList.Length; i++)
+	for (uint i = 0 ; i < blockList.Length; i++)
 	{
 		auto curBlock = blockList[i].Block;
 
@@ -240,14 +261,14 @@ void DrawBlockList()
 			auto pos = Dev::GetOffsetVec3(curBlock, 0x6c);
 			auto rot = Dev::GetOffsetVec3(curBlock, 0x78) / pi * 180;	
 			UI::PushID("Focus" + i);
-			if (UI::Button("Focus"))
+			if (UI::Button(Icons::Eye))
 			{
 				auto diff = pos - _editor.OrbitalCameraControl.m_TargetedPosition;
 				_editor.OrbitalCameraControl.m_TargetedPosition += diff;
 				_editor.OrbitalCameraControl.Pos += diff;
 			}	
 			UI::PopID();
-			UI::SameLine();
+			SameLineAtXPosition(130);
 			if (curBlock.WaypointSpecialProperty !is null && curBlock.WaypointSpecialProperty.Order != 0)
 			{
 				int order = curBlock.WaypointSpecialProperty.Order;
@@ -262,7 +283,7 @@ void DrawBlockList()
 		} else 
 		{
 			UI::PushID("Focus" + i);			
-			if (UI::Button("Focus"))
+			if (UI::Button(Icons::Eye))
 			{
 				auto worldPos = vec3(curBlock.Coord.x * 32, (curBlock.Coord.y - 8) * 8, curBlock.Coord.z * 32);
 				auto diff = worldPos - _editor.OrbitalCameraControl.m_TargetedPosition;
@@ -274,23 +295,41 @@ void DrawBlockList()
 			UI::SameLine();
 			bool didRemoveBlock = false;
 			int3 blockCoord;
-			if (UI::Button("x"))
+			if (UI::Button(Icons::Kenney::TrashAlt))
 			{
 				didRemoveBlock = true;
 				blockCoord = int3(curBlock.Coord.x,curBlock.Coord.y,curBlock.Coord.z);
 			}	
 			UI::PopID();
-			UI::SameLine();
-			if (curBlock.WaypointSpecialProperty !is null && curBlock.WaypointSpecialProperty.Order != 0)
+
+			if (curBlock.WaypointSpecialProperty !is null)
 			{
-				int order = curBlock.WaypointSpecialProperty.Order;
-				UI::PushStyleColor(UI::Col::Text, GetOrderColor(order));
-				UI::Text("[" + GetOrderColorString(order) + "]");
-				UI::PopStyleColor();
-				UI::SameLine();
+
+				if (curBlock.WaypointSpecialProperty.Tag == "Spawn")
+				{
+					UI::SameLine();
+					UI::PushID("play" + i);
+					if (UI::Button(Icons::Play))
+					{
+						_mapEditor.TestMapFromCoord(int3(curBlock.Coord.x, curBlock.Coord.y, curBlock.Coord.z), CGameEditorPluginMap::ECardinalDirections(int(curBlock.BlockDir)));
+					}	
+					UI::PopID();	
+				}
+				
+				if (curBlock.WaypointSpecialProperty.Order != 0)
+				{
+					SameLineAtXPosition(130);
+					int order = curBlock.WaypointSpecialProperty.Order;
+					UI::PushStyleColor(UI::Col::Text, GetOrderColor(order));
+					UI::Text("[" + GetOrderColorString(order) + "]");
+					UI::PopStyleColor();
+					UI::SameLine();
+				}else{					
+					SameLineAtXPosition(130);
+				}
 			}
 			UI::Text( "  " + curBlock.DescId.GetName() 
-				+ " Coord:(" + curBlock.Coord.x + ", " + curBlock.Coord.y + ", " + curBlock.Coord.z + ")"
+				+ " Coord:(\\$f88" + curBlock.Coord.x + ", \\$8f8" + curBlock.Coord.y + ", \\$88f" + curBlock.Coord.z + "\\$z)"
 				+ " Dir: " + curBlock.BlockDir);		
 
 			if (didRemoveBlock)
@@ -306,20 +345,21 @@ void DrawBlockList()
 	UI::EndChild();
 }
 
-void DoSaveAsButton( const string&in path,const string&in name, const string&in color, const string&in colorCode){
+void DoSaveAsButton( const string&in path,const string&in name, const string&in color, const string&in colorCode)
+{
 	if(UI::Button(color)){
-		_mapEditor.SaveMap(path + name + "-" + colorCode + color);
+		_mapEditor.SaveMap(path + name + " - " + (saveWithColoredName ? "" : colorCode) + color);
 	}
 }
 
-void AntiPurge(int colorId)
+void AntiPurge(uint colorId)
 {
 	auto app = GetApp();
 
-	int c = 0;
+	uint c = 0;
 	array<int3> coords();
 
-	for (int i = 0; i < _map.Blocks.Length; i++)
+	for (uint i = 0; i < _map.Blocks.Length; i++)
 	{
 
 		auto thisBlock = _map.Blocks[i];
@@ -335,7 +375,7 @@ void AntiPurge(int colorId)
 		}
 	}
 
-	for (int i = 0; i < c; i++)
+	for (uint i = 0; i < c; i++)
 	{
 		_mapEditor.RemoveBlock(coords[i]);
 	}
