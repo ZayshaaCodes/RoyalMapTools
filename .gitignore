@@ -2,7 +2,7 @@
 *.sig
 
 # Releases
-*.zip
+# *.zip
 *.op
 
 # Sign scripts
