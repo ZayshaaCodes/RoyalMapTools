@@ -348,7 +348,7 @@ void DrawBlockList()
 void DoSaveAsButton( const string&in path,const string&in name, const string&in color, const string&in colorCode)
 {
 	if(UI::Button(color)){
-		_mapEditor.SaveMap(path + name + " - " + (saveWithColoredName ? colorCode : "$z$fff" ) + color);
+		_mapEditor.SaveMap(path + name + " - " + (saveWithColoredName ? colorCode : "$g" ) + color);
 	}
 }
 
